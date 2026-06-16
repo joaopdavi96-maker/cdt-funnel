@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Código da Traição — Seu Resultado</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #8B0000;
+      --red-mid: #C04828;
+      --cream: #f2ebe0;
+      --dark: #090707;
+      --dark-mid: #0f0b0b;
+      --dark-2: #150e0e;
+    }
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--dark);
+      color: var(--cream);
+      overflow: hidden;
+    }
+
+    /* ── SPLASH ── */
+    #splash {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--dark);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 2rem;
+      transition: opacity 0.6s ease;
+    }
+    #splash.hide { opacity: 0; pointer-events: none; }
+    .splash-eyebrow { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--red-mid); margin-bottom: 1.2rem; }
+    .splash-title { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 6vw, 2.2rem); font-weight: 700; color: var(--cream); line-height: 1.25; margin-bottom: 0.8rem; }
+    .splash-sub { font-size: 0.85rem; font-weight: 300; color: rgba(242,235,224,0.5); margin-bottom: 2rem; line-height: 1.6; }
+    .splash-loader { width: 40px; height: 2px; background: rgba(192,72,40,0.2); border-radius: 2px; overflow: hidden; }
+    .splash-loader-fill { height: 100%; width: 0%; background: var(--red-mid); border-radius: 2px; animation: load 1.8s ease forwards; }
+    @keyframes load { to { width: 100%; } }
+
+    /* ── APP SHELL ── */
+    #app { height: 100svh; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.6s ease; }
+    #app.show { opacity: 1; }
+
+    /* HEADER */
+    .app-header {
+      padding: 1rem 1.4rem 0.8rem;
+      background: var(--dark);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+    }
+    .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
+    .app-logo { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 700; color: var(--cream); letter-spacing: 0.3px; }
+    .app-logo span { color: var(--red-mid); font-style: italic; }
+    .header-step { font-size: 0.72rem; color: rgba(242,235,224,0.35); }
+
+    /* PROGRESS DOTS */
+    .progress-dots { display: flex; gap: 6px; align-items: center; }
+    .dot { width: 28px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.1); transition: background 0.3s; }
+    .dot.active { background: var(--red-mid); }
+    .dot.done { background: rgba(192,72,40,0.4); }
+
+    /* TELAS */
+    .screens { flex: 1; overflow: hidden; position: relative; }
+    .screen {
+      position: absolute; inset: 0;
+      overflow-y: auto;
+      padding: 1.6rem 1.4rem 6rem;
+      opacity: 0;
+      transform: translateX(30px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      pointer-events: none;
+    }
+    .screen.active { opacity: 1; transform: translateX(0); pointer-events: all; }
+    .screen.exit { opacity: 0; transform: translateX(-30px); }
+
+    /* FOOTER NAV */
+    .app-footer {
+      padding: 1rem 1.4rem;
+      background: var(--dark);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+    }
+    .btn-next {
+      display: block; width: 100%;
+      background: var(--red-mid); color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem; font-weight: 500;
+      padding: 15px 24px; border-radius: 4px;
+      border: none; cursor: pointer;
+      text-align: center; text-decoration: none;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 0 32px rgba(139,0,0,0.35);
+    }
+    .btn-next:active { transform: scale(0.98); }
+    .btn-next.ghost {
+      background: transparent;
+      border: 1px solid rgba(192,72,40,0.4);
+      color: var(--red-mid);
+      box-shadow: none;
+      margin-top: 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    /* TIPOGRAFIA COMUM */
+    .screen-eyebrow { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--red-mid); margin-bottom: 1rem; display: block; }
+    .screen-title { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 5.5vw, 2rem); font-weight: 700; color: var(--cream); line-height: 1.25; margin-bottom: 0.8rem; }
+    .screen-sub { font-size: 0.88rem; font-weight: 300; color: rgba(242,235,224,0.6); line-height: 1.7; margin-bottom: 1.6rem; }
+
+    /* TELA 1 — DIAGNÓSTICO */
+    .score-ring-wrap { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1.6rem; padding: 1.2rem; background: rgba(139,0,0,0.07); border: 1px solid rgba(192,72,40,0.2); border-radius: 6px; }
+    .ring-svg { width: 72px; height: 72px; flex-shrink: 0; }
+    .ring-info {}
+    .ring-score { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: var(--red-mid); line-height: 1; }
+    .ring-label { font-size: 0.75rem; font-weight: 300; color: rgba(242,235,224,0.45); margin-top: 0.2rem; }
+    .ring-profile { font-size: 0.82rem; font-weight: 500; color: var(--cream); margin-top: 0.4rem; }
+
+    .diag-list { display: flex; flex-direction: column; }
+    .diag-item { display: flex; gap: 12px; align-items: flex-start; padding: 0.9rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .diag-item:first-child { border-top: 1px solid rgba(255,255,255,0.05); }
+    .diag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red-mid); flex-shrink: 0; margin-top: 4px; }
+    .diag-dot.amber { background: #BA7517; }
+    .diag-dot.green { background: #3B6D11; }
+    .diag-text { font-size: 0.85rem; font-weight: 300; color: rgba(242,235,224,0.78); line-height: 1.55; }
+    .diag-text strong { color: var(--cream); font-weight: 500; }
+
+    /* TELA 2 — SIGNIFICADO */
+    .meaning-block { margin-bottom: 1.4rem; padding: 1.1rem 1.2rem; border-left: 3px solid var(--red-mid); background: rgba(139,0,0,0.05); border-radius: 0 6px 6px 0; }
+    .meaning-block.amber { border-left-color: #BA7517; }
+    .meaning-block.neutral { border-left-color: rgba(255,255,255,0.15); }
+    .meaning-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--red-mid); margin-bottom: 0.5rem; display: block; }
+    .meaning-label.amber { color: #BA7517; }
+    .meaning-label.neutral { color: rgba(242,235,224,0.35); }
+    .meaning-text { font-size: 0.85rem; font-weight: 300; color: rgba(242,235,224,0.78); line-height: 1.65; }
+    .meaning-text strong { color: var(--cream); font-weight: 500; }
+
+    /* TELA 3 — PROTOCOLO */
+    .protocol-steps { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.6rem; }
+    .protocol-step { display: flex; gap: 14px; align-items: flex-start; padding: 1rem 1.1rem; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; background: rgba(255,255,255,0.01); }
+    .p-num { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: rgba(139,0,0,0.5); flex-shrink: 0; line-height: 1; min-width: 22px; }
+    .p-title { font-size: 0.88rem; font-weight: 500; color: var(--cream); margin-bottom: 0.25rem; }
+    .p-desc { font-size: 0.8rem; font-weight: 300; color: rgba(242,235,224,0.5); line-height: 1.55; }
+    .alert-box { padding: 1rem 1.2rem; background: rgba(139,0,0,0.08); border: 1px solid rgba(192,72,40,0.25); border-radius: 6px; }
+    .alert-text { font-size: 0.82rem; font-weight: 300; color: rgba(242,235,224,0.65); line-height: 1.65; }
+    .alert-text strong { color: var(--cream); font-weight: 500; }
+
+    /* TELA 4 — DECISÃO */
+    .decision-cards { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.6rem; }
+    .decision-card { padding: 1.2rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.07); }
+    .decision-card.confirmed { border-color: rgba(192,72,40,0.3); background: rgba(139,0,0,0.06); }
+    .decision-card.clear { border-color: rgba(59,109,17,0.3); background: rgba(59,109,17,0.05); }
+    .dc-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 0.6rem; display: block; }
+    .dc-label.red { color: var(--red-mid); }
+    .dc-label.green { color: #639922; }
+    .dc-title { font-size: 0.9rem; font-weight: 500; color: var(--cream); margin-bottom: 0.5rem; }
+    .dc-text { font-size: 0.82rem; font-weight: 300; color: rgba(242,235,224,0.58); line-height: 1.6; }
+    .final-line { font-family: 'Playfair Display', serif; font-size: clamp(1rem, 4vw, 1.3rem); font-weight: 700; color: var(--cream); line-height: 1.4; text-align: center; padding: 1.4rem 0; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 1.6rem; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <p class="splash-eyebrow">Código da Traição</p>
+  <h1 class="splash-title">Processando<br>seu diagnóstico...</h1>
+  <p class="splash-sub">Analisando suas respostas.<br>Seu resultado está sendo preparado.</p>
+  <div class="splash-loader"><div class="splash-loader-fill"></div></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-top">
+      <span class="app-logo">Código da <span>Traição</span></span>
+      <span class="header-step" id="header-step">1 de 4</span>
+    </div>
+    <div class="progress-dots">
+      <div class="dot active" id="dot-0"></div>
+      <div class="dot" id="dot-1"></div>
+      <div class="dot" id="dot-2"></div>
+      <div class="dot" id="dot-3"></div>
+    </div>
+  </header>
+
+  <!-- TELAS -->
+  <div class="screens">
+
+    <!-- TELA 1: DIAGNÓSTICO -->
+    <div class="screen active" id="screen-0">
+      <span class="screen-eyebrow">Seu diagnóstico</span>
+      <h2 class="screen-title" id="s1-title"></h2>
+      <p class="screen-sub" id="s1-sub"></p>
+      <div class="score-ring-wrap">
+        <svg class="ring-svg" viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(139,0,0,0.15)" stroke-width="5"/>
+          <circle cx="36" cy="36" r="30" fill="none" stroke="#C04828" stroke-width="5"
+            id="ring-circle"
+            stroke-dasharray="188"
+            stroke-dashoffset="188"
+            stroke-linecap="round"
+            transform="rotate(-90 36 36)"
+            style="transition: stroke-dashoffset 1.2s ease 0.3s"/>
+        </svg>
+        <div class="ring-info">
+          <div class="ring-score" id="ring-score">0%</div>
+          <div class="ring-label">nível de risco</div>
+          <div class="ring-profile" id="ring-profile"></div>
+        </div>
+      </div>
+      <div class="diag-list" id="diag-list"></div>
+    </div>
+
+    <!-- TELA 2: SIGNIFICADO -->
+    <div class="screen" id="screen-1">
+      <span class="screen-eyebrow">O que isso significa</span>
+      <h2 class="screen-title" id="s2-title"></h2>
+      <p class="screen-sub" id="s2-sub"></p>
+      <div id="meaning-blocks"></div>
+    </div>
+
+    <!-- TELA 3: PROTOCOLO -->
+    <div class="screen" id="screen-2">
+      <span class="screen-eyebrow">Protocolo de 24h</span>
+      <h2 class="screen-title" id="s3-title"></h2>
+      <p class="screen-sub" id="s3-sub"></p>
+      <div class="protocol-steps" id="protocol-steps"></div>
+      <div class="alert-box" id="alert-box"></div>
+    </div>
+
+    <!-- TELA 4: DECISÃO -->
+    <div class="screen" id="screen-3">
+      <span class="screen-eyebrow">A decisão</span>
+      <h2 class="screen-title" id="s4-title"></h2>
+      <p class="screen-sub" id="s4-sub"></p>
+      <div class="decision-cards" id="decision-cards"></div>
+      <p class="final-line" id="final-line"></p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="app-footer" id="app-footer" style="display:flex;flex-direction:column;gap:0.6rem;">
+    <button class="btn-next" id="btn-main" onclick="nextScreen()">Continuar →</button>
+    <button class="btn-next ghost" id="btn-back" onclick="prevScreen()" style="display:none;">← Voltar</button>
+  </div>
+
+</div>
+
+<script>
+// ── LÊ SCORE DA URL ──
+const params = new URLSearchParams(window.location.search);
+const rawScore = parseInt(params.get('score')) || 0;
+const score = Math.min(100, Math.max(0, rawScore));
+
+// ── PERFIL ──
+let profile;
+if (score >= 65) profile = 'alto';
+else if (score >= 35) profile = 'medio';
+else profile = 'baixo';
+
+// ── CONTEÚDO POR PERFIL ──
+const content = {
+  alto: {
+    s1: {
+      title: 'Os sinais estão claros. Você não está sendo paranoico.',
+      sub: 'Suas respostas revelam um padrão consistente. O que você sente tem base real — e agora você vai entender exatamente o que está acontecendo.',
+      profile: '⚠ Risco elevado identificado',
+      diag: [
+        { cor: 'red', forte: 'Comportamento de ocultação com celular', desc: 'Tela virada e silencioso simultâneos raramente acontecem por acaso.' },
+        { cor: 'red', forte: 'Distanciamento emocional progressivo', desc: 'Frieza que aparece devagar pra não chamar atenção.' },
+        { cor: 'red', forte: 'Padrão de mentiras de cobertura', desc: 'Justificativas prontas demais indicam preparação prévia.' },
+        { cor: 'amber', forte: 'Instinto ativado com base concreta', desc: 'Seu cérebro processou sinais reais antes da sua consciência.' },
+      ]
+    },
+    s2: {
+      title: 'Esses padrões não aparecem juntos por acaso.',
+      sub: 'Cada comportamento isolado tem explicação. Juntos, formam um quadro que a psicologia do comportamento reconhece como clássico.',
+      blocks: [
+        { cor: 'red', label: 'O que o celular revela', text: 'Quando alguém começa a esconder o celular de quem ama, existe uma razão. <strong>Não é paranoia sua — é proteção dela.</strong> Celular virado, notificações mudas e saídas de sala pra atender são comportamentos de quem tem algo a proteger.' },
+        { cor: 'red', label: 'O que o distanciamento revela', text: 'O afeto não some sem causa. Quando diminui gradualmente, é porque a energia emocional está sendo investida em outro lugar. <strong>Ela não está cansada de você — ela está presente em outro lugar.</strong>' },
+        { cor: 'amber', label: 'O que o seu instinto revela', text: 'O instinto humano é um processador de padrões. Quando ele dispara sem que você consiga explicar exatamente por quê, é porque seu cérebro já somou os sinais antes de você. <strong>Confie no que sente — agora aprenda a confirmar.</strong>' },
+      ]
+    },
+    s3: {
+      title: 'O que fazer nas próximas 24 horas.',
+      sub: 'Não confronte ainda. Observe com método. Cada passo abaixo tem uma razão estratégica.',
+      steps: [
+        { num: '1', title: 'Registre sem reagir', desc: 'Nas próximas 24h, anote mentalmente cada comportamento suspeito com horário e contexto. Não reaja. Quem reage antes de ter provas perde a vantagem.' },
+        { num: '2', title: 'Observe o celular, não o conteúdo', desc: 'Não tente ver as mensagens. Observe o comportamento: ela pega o celular quando você entra no cômodo? Leva pro banheiro? Muda de tela quando você se aproxima?' },
+        { num: '3', title: 'Teste a consistência das histórias', desc: 'Faça uma pergunta casual sobre algo que ela mencionou antes. Histórias verdadeiras têm detalhes consistentes. Histórias fabricadas mudam nos detalhes quando pressionadas levemente.' },
+        { num: '4', title: 'Observe a linguagem corporal', desc: 'Quando o assunto aparece indiretamente — uma cena de traição na TV, uma amiga que foi traída — como ela reage? Culpa e desvio de olhar são reações físicas difíceis de controlar.' },
+      ],
+      alert: '<strong>Importante:</strong> O objetivo dessas 24h não é confirmar a traição. É coletar informação suficiente pra tomar uma decisão baseada em fatos — não em emoção.'
+    },
+    s4: {
+      title: 'Agora você decide o que fazer com o que sabe.',
+      sub: 'Clareza não é o mesmo que certeza absoluta. Mas é o suficiente pra você parar de se destruir e começar a agir.',
+      cards: [
+        { tipo: 'confirmed', label: 'Se os sinais se confirmaram', title: 'Como confrontar com inteligência', text: 'Não confronte com emoção — confronte com fatos. Escolha um momento de calma, apresente o que observou sem acusação direta, e observe a reação. A reação dela vai dizer mais do que qualquer confissão.' },
+        { tipo: 'clear', label: 'Se os sinais não se confirmaram', title: 'Como sair da angústia definitivamente', text: 'Seu instinto errou desta vez — e isso é bom. Mas se a desconfiança volta com frequência, existe um problema de confiança no relacionamento que precisa ser trabalhado. Ignorar não resolve.' },
+      ],
+      final: 'Você não está aqui por acaso. Está aqui porque se importa — com ela, com você, com o que construíram.'
+    }
+  },
+
+  medio: {
+    s1: {
+      title: 'Há sinais. Mas você ainda não tem o quadro completo.',
+      sub: 'Alguns comportamentos são suspeitos. Individualmente podem ter explicação. Juntos, pedem atenção.',
+      profile: '⚡ Risco moderado identificado',
+      diag: [
+        { cor: 'amber', forte: 'Sinais ambíguos identificados', desc: 'Individualmente podem ter explicação — juntos revelam um padrão.' },
+        { cor: 'amber', forte: 'Instinto ativado sem confirmação concreta', desc: 'Seu cérebro está processando algo que os olhos ainda não viram.' },
+        { cor: 'amber', forte: 'Zona de incerteza detectada', desc: 'Nem confirma nem descarta — e é exatamente aqui que relacionamentos morrem devagar.' },
+        { cor: 'green', forte: 'Sem padrão claro de ocultação', desc: 'Comportamentos de esconder não aparecem de forma consistente ainda.' },
+      ]
+    },
+    s2: {
+      title: 'A zona de incerteza é a mais perigosa de todas.',
+      sub: 'Não é a traição que destrói relacionamentos. É a dúvida crônica que consome os dois.',
+      blocks: [
+        { cor: 'amber', label: 'O perigo do "talvez"', text: 'Quando você vive no talvez, sua mente cria cenários constantemente. <strong>A incerteza é mais desgastante do que qualquer resposta — mesmo a pior delas.</strong> Pelo menos a resposta permite uma decisão.' },
+        { cor: 'amber', label: 'O que os sinais ambíguos indicam', text: 'Podem indicar traição em fase inicial. Podem indicar um problema diferente no relacionamento. Podem ser coincidência. <strong>O que você precisa é de método pra distinguir um do outro</strong> — não de achismo.' },
+        { cor: 'neutral', label: 'O que fazer agora', text: 'Você está na fase certa pra observar sem confrontar. Tem tempo de coletar informação real antes de agir. <strong>Agir agora sem dados suficientes pode destruir algo que ainda pode ser salvo</strong> — ou pode fazer você ignorar algo que não deveria.' },
+      ]
+    },
+    s3: {
+      title: 'Como sair da dúvida com método — não com emoção.',
+      sub: 'Você tem uma janela de observação antes de qualquer confronto. Use-a bem.',
+      steps: [
+        { num: '1', title: 'Estabeleça uma linha de base', desc: 'Por 24h, observe o comportamento normal dela sem filtro de suspeita. Você precisa saber o que é padrão pra identificar o que é desvio.' },
+        { num: '2', title: 'Identifique os gatilhos', desc: 'Em quais momentos específicos você sente mais desconfiança? Depois de quais situações? Isso vai te dizer se é intuição ou ansiedade.' },
+        { num: '3', title: 'Teste a comunicação antes do confronto', desc: 'Abra uma conversa emocional leve — não sobre traição, sobre o relacionamento. Como ela responde? Defensiva? Distante? Presente? A qualidade da resposta revela muito.' },
+        { num: '4', title: 'Decida com prazo', desc: 'Dê-se 72h de observação. Depois disso, você vai ter informação suficiente pra decidir se confronta, se busca ajuda no relacionamento, ou se descansa a cabeça.' },
+      ],
+      alert: '<strong>Lembre-se:</strong> o objetivo não é pegar ela fazendo algo errado. O objetivo é você sair da dúvida — independente de qual seja a resposta.'
+    },
+    s4: {
+      title: 'Você merece uma resposta. De um jeito ou de outro.',
+      sub: 'A incerteza não é um estado permanente. É um ponto de decisão.',
+      cards: [
+        { tipo: 'confirmed', label: 'Se os sinais se confirmarem', title: 'Você vai estar preparado', text: 'Com o método certo, você vai ter informação concreta antes de confrontar. Isso muda completamente a dinâmica da conversa — você fala de um lugar de clareza, não de desespero.' },
+        { tipo: 'clear', label: 'Se os sinais não se confirmarem', title: 'Você recupera a paz', text: 'Saber que não há traição não resolve tudo. Mas resolve a dúvida — e abre espaço pra trabalhar o que realmente está afetando o relacionamento.' },
+      ],
+      final: 'Você não é fraco por desconfiar. É humano. E agora tem um método pra sair disso com dignidade.'
+    }
+  },
+
+  baixo: {
+    s1: {
+      title: 'Os sinais não apontam para traição agora.',
+      sub: 'Suas respostas indicam ausência dos padrões clássicos de infidelidade. Mas você está aqui — e isso também diz algo importante.',
+      profile: '✓ Risco baixo identificado',
+      diag: [
+        { cor: 'green', forte: 'Comportamentos de ocultação não detectados', desc: 'Ausência de sinais clássicos no momento atual.' },
+        { cor: 'green', forte: 'Instinto não disparado com intensidade', desc: 'Provavelmente tranquilidade real — não negação.' },
+        { cor: 'amber', forte: 'Atenção preventiva ativada', desc: 'Você veio até aqui por alguma razão — vale entender qual.' },
+        { cor: 'neutral', forte: 'Relacionamento aparentemente estável', desc: 'Sem padrões de desvio comportamental significativos.' },
+      ]
+    },
+    s2: {
+      title: 'Estar atento é diferente de ser paranoico.',
+      sub: 'Quem aprende a ler comportamentos raramente é pego de surpresa — seja qual for a situação.',
+      blocks: [
+        { cor: 'neutral', label: 'O que seu resultado indica', text: 'Você não apresenta sinais clássicos de traição no relacionamento atual. Isso é bom. <strong>Mas o fato de você estar aqui indica que existe algum nível de insegurança ou desconfiança</strong> — e isso merece atenção mesmo sem traição envolvida.' },
+        { cor: 'amber', label: 'Insegurança sem causa aparente', text: 'Às vezes a desconfiança não vem do comportamento dela — vem de experiências passadas, de insegurança pessoal, ou de problemas de comunicação no relacionamento. <strong>Identificar a origem real é o primeiro passo.</strong>' },
+        { cor: 'neutral', label: 'Prevenção é inteligência emocional', text: 'Conhecer os sinais reais de infidelidade protege você — não de ela trair agora, mas de ser o último a perceber se algo mudar no futuro. <strong>Quem sabe o que observar, observa sem ansiedade.</strong>' },
+      ]
+    },
+    s3: {
+      title: 'Como manter clareza sem virar paranoia.',
+      sub: 'O objetivo não é ficar de olho nela. É construir uma base de confiança real.',
+      steps: [
+        { num: '1', title: 'Identifique a origem da desconfiança', desc: 'Pergunte-se honestamente: isso vem dela ou de mim? De algo que ela fez ou de algo que eu vivi antes? A resposta muda completamente o caminho.' },
+        { num: '2', title: 'Abra o canal de comunicação', desc: 'Relacionamentos saudáveis têm espaço pra falar sobre inseguranças sem virar acusação. Se você não consegue ter essa conversa, o problema é maior que a desconfiança.' },
+        { num: '3', title: 'Estabeleça o que é inegociável pra você', desc: 'Clareza sobre seus limites protege você de normalizar comportamentos que incomodam com o tempo. Saiba o que você aceita e o que não aceita.' },
+        { num: '4', title: 'Conheça os sinais reais', desc: 'Saber exatamente o que observar te liberta da ansiedade de "será que estou vendo certo?". Com método, você observa com calma — não com desespero.' },
+      ],
+      alert: '<strong>Lembre-se:</strong> o maior presente que você pode dar pra um relacionamento saudável é presença real — não vigilância. Mas presença informada é mais segura que presença ingênua.'
+    },
+    s4: {
+      title: 'Você está bem. E agora está mais preparado.',
+      sub: 'Conhecimento não cria paranoia em quem é seguro. Cria clareza.',
+      cards: [
+        { tipo: 'clear', label: 'O que fazer agora', title: 'Invista no relacionamento que você tem', text: 'Se o relacionamento está bem, cuide dele. Comunicação, presença e confiança construída ativamente são a melhor proteção contra qualquer problema futuro.' },
+        { tipo: 'clear', label: 'Se a insegurança persistir', title: 'O problema pode ser interno', text: 'Desconfiança crônica sem causa real costuma ter origem em feridas anteriores. Trabalhar isso — com ou sem ajuda profissional — é um investimento em você, não apenas no relacionamento.' },
+      ],
+      final: 'Você não veio até aqui por fraqueza. Veio porque se importa. Isso é força.'
+    }
+  }
+};
+
+// ── POPULA CONTEÚDO ──
+const C = content[profile];
+
+// Tela 1
+document.getElementById('s1-title').textContent = C.s1.title;
+document.getElementById('s1-sub').textContent = C.s1.sub;
+document.getElementById('ring-profile').textContent = C.s1.profile;
+
+const diagList = document.getElementById('diag-list');
+C.s1.diag.forEach(d => {
+  diagList.innerHTML += `<div class="diag-item">
+    <span class="diag-dot ${d.cor === 'amber' ? 'amber' : d.cor === 'green' ? 'green' : ''}"></span>
+    <p class="diag-text"><strong>${d.forte}</strong> — ${d.desc}</p>
+  </div>`;
+});
+
+// Tela 2
+document.getElementById('s2-title').textContent = C.s2.title;
+document.getElementById('s2-sub').textContent = C.s2.sub;
+const mbEl = document.getElementById('meaning-blocks');
+C.s2.blocks.forEach(b => {
+  mbEl.innerHTML += `<div class="meaning-block ${b.cor === 'amber' ? 'amber' : b.cor === 'neutral' ? 'neutral' : ''}">
+    <span class="meaning-label ${b.cor === 'amber' ? 'amber' : b.cor === 'neutral' ? 'neutral' : ''}">${b.label}</span>
+    <p class="meaning-text">${b.text}</p>
+  </div>`;
+});
+
+// Tela 3
+document.getElementById('s3-title').textContent = C.s3.title;
+document.getElementById('s3-sub').textContent = C.s3.sub;
+const psEl = document.getElementById('protocol-steps');
+C.s3.steps.forEach(s => {
+  psEl.innerHTML += `<div class="protocol-step">
+    <span class="p-num">${s.num}</span>
+    <div><p class="p-title">${s.title}</p><p class="p-desc">${s.desc}</p></div>
+  </div>`;
+});
+document.getElementById('alert-box').innerHTML = `<p class="alert-text">${C.s3.alert}</p>`;
+
+// Tela 4
+document.getElementById('s4-title').textContent = C.s4.title;
+document.getElementById('s4-sub').textContent = C.s4.sub;
+const dcEl = document.getElementById('decision-cards');
+C.s4.cards.forEach(c => {
+  dcEl.innerHTML += `<div class="decision-card ${c.tipo}">
+    <span class="dc-label ${c.tipo === 'confirmed' ? 'red' : 'green'}">${c.label}</span>
+    <p class="dc-title">${c.title}</p>
+    <p class="dc-text">${c.text}</p>
+  </div>`;
+});
+document.getElementById('final-line').textContent = C.s4.final;
+
+// ── NAVEGAÇÃO ──
+let current = 0;
+const totalScreens = 4;
+
+function prevScreen() {
+  if (current <= 0) return;
+  const cur = document.getElementById(`screen-${current}`);
+  const prev = document.getElementById(`screen-${current - 1}`);
+  cur.classList.remove("active");
+  current--;
+  prev.classList.add("active");
+  prev.scrollTop = 0;
+  updateHeader();
+}
+
+function updateHeader() {
+  document.getElementById('header-step').textContent = `${current + 1} de ${totalScreens}`;
+  for (let i = 0; i < totalScreens; i++) {
+    const dot = document.getElementById(`dot-${i}`);
+    dot.className = 'dot' + (i < current ? ' done' : i === current ? ' active' : '');
+  }
+  const btn = document.getElementById("btn-main");
+  const btnBack = document.getElementById("btn-back");
+  btnBack.style.display = current > 0 ? "block" : "none";
+  const footer = document.getElementById('app-footer');
+  if (current === totalScreens - 1) {
+    footer.innerHTML = `<p style="font-size:0.78rem;color:rgba(242,235,224,0.35);text-align:center;line-height:1.7;">Você concluiu seu diagnóstico completo.<br>Guarde esse acesso — ele é seu.</p>`;
+  } else {
+    btn.textContent = current === totalScreens - 2 ? 'Ver a decisão →' : 'Continuar →';
+  }
+}
+
+function nextScreen() {
+  if (current >= totalScreens - 1) return;
+  const cur = document.getElementById(`screen-${current}`);
+  const next = document.getElementById(`screen-${current + 1}`);
+  cur.classList.remove('active');
+  cur.classList.add('exit');
+  setTimeout(() => cur.classList.remove('exit'), 400);
+  current++;
+  next.classList.add('active');
+  next.scrollTop = 0;
+  updateHeader();
+}
+
+// ── RING ANIMATION ──
+function animateRing() {
+  const circle = document.getElementById('ring-circle');
+  const scoreEl = document.getElementById('ring-score');
+  const circumference = 188;
+  const offset = circumference - (circumference * score / 100);
+  circle.style.strokeDashoffset = offset;
+  let displayed = 0;
+  const interval = setInterval(() => {
+    displayed = Math.min(displayed + 2, score);
+    scoreEl.textContent = displayed + '%';
+    if (displayed >= score) clearInterval(interval);
+  }, 20);
+}
+
+// ── INIT ──
+setTimeout(() => {
+  document.getElementById('splash').classList.add('hide');
+  document.getElementById('app').classList.add('show');
+  setTimeout(animateRing, 400);
+}, 2000);
+
+updateHeader();
+</script>
+</body>
+</html>
